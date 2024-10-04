@@ -1,21 +1,24 @@
 import { z } from 'zod';
 import type {
-	ApiSchema,
-	Endpoint,
-	Tea,
-	TeaConfig,
-	RouteParameters,
-	ExtractPath,
-	InferBody,
-	InferQuery,
-	InferResponse,
-	HttpMethod,
+  ApiSchema,
+  Endpoint,
+  Tea,
+  TeaConfig,
+  RouteParameters,
+  ExtractPath,
+  InferBody,
+  InferQuery,
+  InferResponse,
+  HttpMethod,
 } from './types';
 
-function parseRoute<T extends string>(route: T, params: RouteParameters<T>): string {
-	return route.replace(/:(\w+)/g, (_, key) =>
-		encodeURIComponent(String(params[key as keyof RouteParameters<T>])),
-	);
+function parseRoute<T extends string>(
+  route: T,
+  params: RouteParameters<T>
+): string {
+  return route.replace(/:(\w+)/g, (_, key) =>
+    encodeURIComponent(String(params[key as keyof RouteParameters<T>]))
+  );
 }
 
 /**
@@ -60,78 +63,92 @@ function parseRoute<T extends string>(route: T, params: RouteParameters<T>): str
  * });
  */
 export function createTea<T extends ApiSchema>(
-	baseUrl: string,
-	schema: T,
-	defaultConfig: TeaConfig = {},
+  baseUrl: string,
+  schema: T,
+  defaultConfig: TeaConfig = {}
 ): Tea<T> {
-	return async <K extends keyof T & string>(
-		key: K,
-		options: {
-			params?: RouteParameters<ExtractPath<K>>;
-			body?: InferBody<T[K]> | any;
-			query?: InferQuery<T[K]>;
-			stringify?: number;
-		} & Omit<RequestInit, 'method' | 'body'> = {},
-	): Promise<InferResponse<T[K]>> => {
-		const endpoint = schema[key];
-		const { params, body, query, stringify, ...requestOptions } = options;
+  return async <K extends keyof T & string>(
+    key: K,
+    options: {
+      params?: RouteParameters<ExtractPath<K>>;
+      body?: InferBody<T[K]> | any;
+      query?: InferQuery<T[K]>;
+      stringify?: number;
+    } & Omit<RequestInit, 'method' | 'body'> = {}
+  ): Promise<InferResponse<T[K]>> => {
+    const endpoint = schema[key];
+    const { params, body, query, stringify, ...requestOptions } = options;
 
-		const [methodStr, ...pathParts] = key.split(' ');
-		const method = methodStr as HttpMethod;
-		const path = pathParts.join(' ');
+    const [methodStr, ...pathParts] = key.split(' ');
+    const method = methodStr as HttpMethod;
+    const path = pathParts.join(' ');
 
-		let url = new URL(parseRoute(path, params || ({} as RouteParameters<typeof path>)), baseUrl);
+    let url = new URL(
+      parseRoute(path, params || ({} as RouteParameters<typeof path>)),
+      baseUrl
+    );
 
-		if (query) {
-			Object.entries(query).forEach(([key, value]) => {
-				url.searchParams.append(key, String(value));
-			});
-		}
+    if (query) {
+      Object.entries(query).forEach(([key, value]) => {
+        url.searchParams.append(key, String(value));
+      });
+    }
 
-		const mergedOptions: RequestInit = {
-			...defaultConfig,
-			...requestOptions,
-			method,
-			headers: {
-				...defaultConfig.headers,
-				...requestOptions.headers,
-			},
-		};
+    const mergedOptions: RequestInit = {
+      ...defaultConfig,
+      ...requestOptions,
+      method,
+      headers: {
+        ...defaultConfig.headers,
+        ...requestOptions.headers,
+      },
+    };
 
-		if (['POST', 'PUT', 'PATCH'].includes(method) && body !== undefined) {
-			mergedOptions.body = stringify ? JSON.stringify(body, null, stringify ?? 2) : body;
-			mergedOptions.headers = {
-				'Content-Type': 'application/json',
-				...mergedOptions.headers,
-			};
-		}
+    if (['POST', 'PUT', 'PATCH'].includes(method) && body !== undefined) {
+      mergedOptions.body =
+        stringify !== undefined ? JSON.stringify(body, null, stringify) : body;
+      mergedOptions.headers = {
+        'Content-Type': 'application/json',
+        ...mergedOptions.headers,
+      };
+    }
 
-		const response = await fetch(url.toString(), mergedOptions);
+    const response = await fetch(url.toString(), mergedOptions);
 
-		if (!response.ok) {
-			let errorBody;
-			try {
-				errorBody = await response;
-			} catch (e) {
-				errorBody = 'Unable to read error response body';
-			}
-			throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
-		}
+    if (!response.ok) {
+      let errorBody;
+      try {
+        errorBody = await response.json();
+      } catch (e) {
+        errorBody = 'Unable to read error response body';
+      }
+      throw new Error(
+        `HTTP error! status: ${response.status}, body: ${errorBody}`
+      );
+    }
 
-		let data;
-		try {
-			data = await response.json();
-		} catch (e: any) {
-			throw new Error(`Failed to parse JSON response: ${e.message}`);
-		}
+    let data;
+    try {
+      data = await response.json();
+    } catch (e: any) {
+      throw new Error(`Failed to parse JSON response: ${e.message}`);
+    }
 
-		try {
-			return (endpoint as Endpoint<z.ZodType, z.ZodType, z.ZodType>).response.parse(data);
-		} catch (e) {
-			if (e instanceof z.ZodError) {
-				throw new Error(`Response validation failed: ${e.message}`);
-			}
-			throw e;
-		}
-	};
+    try {
+      return (
+        endpoint as Endpoint<z.ZodType, z.ZodType, z.ZodType>
+      ).response.parse(data);
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        throw new Error(
+          `Response validation failed: ${e.issues
+            .map((issue) => {
+              `${issue.path}: ${issue.message}`;
+            })
+            .join(', ')}`
+        );
+      }
+      throw e;
+    }
+  };
 }
