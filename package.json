@@ -1,0 +1,32 @@
+{
+  "name": "tea",
+  "module": "index.ts",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "zod",
+    "fetch",
+    "typescript"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch ./src/index.ts",
+    "pub": "tsc && npm publish",
+    "patch": "tsc && npm version patch && npm publish",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.3",
+    "@types/bun": "latest",
+    "tsx": "^4.19.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "trustedDependencies": [
+    "@biomejs/biome"
+  ],
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}
