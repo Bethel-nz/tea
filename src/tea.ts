@@ -108,9 +108,12 @@ export function createTea<T extends ApiSchema>(
       mergedOptions.body =
         stringify !== undefined ? JSON.stringify(body, null, stringify) : body;
       mergedOptions.headers = {
-    
         ...mergedOptions.headers,
       };
+
+    if (!mergedOptions.headers['Content-Type']) {
+      mergedOptions.headers['Content-Type'] = 'application/json'
+}
     }
 
     const response = await fetch(url.toString(), mergedOptions);
