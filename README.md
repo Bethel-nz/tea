@@ -9,6 +9,7 @@
 - Support for path parameters, query parameters, and request bodies
 - Automatic parsing of JSON responses
 - Custom headers and request options
+- Abstracted error handling with tuple return type
 
 ## Usage
 
@@ -40,7 +41,7 @@ const apiSchema = {
       title: z.string(),
       body: z.string(),
     }), // optionally defined body schema
-    stringify: 2, // pretty print the body - accepts any number for depth
+    stringify: true, // stringify the body - defaults to false
   },
 } as const;
 ```
@@ -59,30 +60,59 @@ Now you can make fully typed requests to your API:
 
 ```typescript
 // GET request
-const posts = await tea('GET /posts');
-console.log(posts); // Array of posts with type inference
+
+const [error, posts] = await tea('GET /posts', {
+  headers: { 'Custom-Header': 'value' },
+});
+if (error) {
+  console.error('Error fetching posts:', error.message);
+} else {
+  console.log('All posts:', posts);
+}
 
 // GET request with path parameter
-const post = await tea('GET /posts/:id', { params: { id: '1' } });
-console.log(post.title); // Typed as string
+
+const [error, post] = await tea('GET /posts/:id', {
+  params: { id },
+});
+if (error) {
+  console.error('Error fetching single post:', error);
+} else {
+  console.log('Single post:', post.title);
+}
 
 // POST request with body
-const newPost = await tea('POST /posts', {
-  body: { title: 'New Post', body: 'This is a new post.' },
+
+const [error, newPost] = await tea('POST /posts', {
+  body: {
+    userId: 1,
+    title: 'foo',
+    body: 'bar',
+  },
+  stringify: true,
 });
-console.log(newPost.id); // Typed as number
-```
+if (error) {
+  console.error('Error creating post:', error.message);
+} else {
+  console.log('Created post:', newPost);
+}
 
-### Adding headers or options
+// PUT request with path parameter and body
 
-You can pass additional options to the underlying `fetch` call:
-
-```typescript
-const posts = await tea('GET /posts', {
-  headers: { 'X-Custom-Header': 'value' },
-  cache: 'no-cache',
-  //... other fetch options
+const [error, updatedPost] = await tea('PUT /posts/:id', {
+  params: { id: '3' },
+  body: {
+    title: 'Updated Title',
+    body: 'Hello world',
+    userId: 1,
+  },
+  stringify: true,
 });
+if (error) {
+  console.error('Error updating post:', error.message);
+} else {
+  console.log('Updated post:', updatedPost);
+}
 ```
 
 ## Why Tea?

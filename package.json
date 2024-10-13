@@ -1,5 +1,6 @@
 {
   "name": "tea",
+  "version": "0.1.1",
   "module": "index.ts",
   "type": "module",
   "license": "MIT",

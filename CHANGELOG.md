@@ -28,3 +28,10 @@
 ## [0.1.0] - 2024-10-04
 
 - Initial release
+
+## [0.1.1] - 2024-10-04
+
+- Added error handling with tuple return type to abstract away try/catch
+- Changed stringify option to boolean - defaults to false
+- Added example to README
+- Fixed issue with merged options not being applied correctly
