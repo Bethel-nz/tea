@@ -10,6 +10,7 @@ import type {
   InferQuery,
   InferResponse,
   HttpMethod,
+  ApiResult,
 } from './types';
 
 function parseRoute<T extends string>(
@@ -25,8 +26,12 @@ function parseRoute<T extends string>(
  * Creates a `tea` function that takes in an API schema and returns a type-safe
  * fetcher for making API requests.
  *
- * @example
+ * @param baseUrl - The base URL for the API.
+ * @param schema - The API schema defining endpoints and their types.
+ * @param defaultConfig - Optional default configuration for all requests.
+ * @returns A type-safe function for making API requests.
  *
+ * @example
  * const postSchema = z.object({
  *   id: z.number(),
  *   title: z.string(),
@@ -49,33 +54,63 @@ function parseRoute<T extends string>(
  *   },
  * } as const;
  *
- * const tea = createTea('https://api.example.com', apiSchema);
+ * const tea = createTea('https://jsonplaceholder.typicode.com', apiSchema);
  *
  * // GET request
- * const posts = await tea('GET /posts');
+ * const [error, posts] = await tea('GET /posts');
+ * if (error) {
+ *   console.error('Error fetching posts:', error);
+ * } else {
+ *   console.log('Posts:', posts);
+ * }
  *
  * // GET request with params
- * const post = await tea('GET /posts/:id', { params: { id: '1' } });
+ * const [error, post] = await tea('GET /posts/:id', { params: { id: '1' } });
+ * if (error) {
+ *   console.error('Error fetching post:', error);
+ * } else {
+ *   console.log('Post:', post);
+ * }
  *
  * // POST request with body
- * const newPost = await tea('POST /posts', {
+ * const [error, newPost] = await tea('POST /posts', {
  *   body: { title: 'New Post', body: 'This is a new post.' },
+ *   stringify: true, // Pretty print the JSON body
  * });
+ * if (error) {
+ *   console.error('Error creating post:', error);
+ * } else {
+ *   console.log('Created post:', newPost);
+ * }
+ *
+ * @remarks
+ * The `tea` function returns a Promise that resolves to an `ApiResult` tuple.
+ * The first element of the tuple is either an Error object (if an error occurred)
+ * or null (if the request was successful). The second element is either the
+ * parsed response data (if successful) or null (if an error occurred).
+ *
+ * The `stringify` option in the request config can be set to `true` to pretty-print
+ * the JSON body of POST, PUT, and PATCH requests.
  */
 export function createTea<T extends ApiSchema>(
   baseUrl: string,
   schema: T,
   defaultConfig: TeaConfig = {}
 ): Tea<T> {
+  /**
+   * @param key - The API endpoint to call.
+   * @param options - The options for the API call.
+   * @returns A Promise that resolves to an `ApiResult` tuple.
+   */
   return async <K extends keyof T & string>(
     key: K,
     options: {
       params?: RouteParameters<ExtractPath<K>>;
       body?: InferBody<T[K]> | any;
       query?: InferQuery<T[K]>;
-      stringify?: number;
+      stringify?: boolean;
     } & Omit<RequestInit, 'method' | 'body'> = {}
-  ): Promise<InferResponse<T[K]>> => {
+  ): Promise<ApiResult<InferResponse<T[K]>>> => {
     const endpoint = schema[key];
     const { params, body, query, stringify, ...requestOptions } = options;
 
@@ -105,53 +140,39 @@ export function createTea<T extends ApiSchema>(
     };
 
     if (['POST', 'PUT', 'PATCH'].includes(method) && body !== undefined) {
-      mergedOptions.body =
-        stringify !== undefined ? JSON.stringify(body, null, stringify) : body;
+      mergedOptions.body = stringify ? JSON.stringify(body, null, 2) : body;
       mergedOptions.headers = {
         ...mergedOptions.headers,
+        'Content-Type': 'application/json',
       };
-
-    if (!mergedOptions.headers['Content-Type']) {
-      mergedOptions.headers['Content-Type'] = 'application/json'
-}
-    }
-
-    const response = await fetch(url.toString(), mergedOptions);
-
-    if (!response.ok) {
-      let errorBody;
-      try {
-        errorBody = await response.json();
-      } catch (e) {
-        errorBody = 'Unable to read error response body';
-      }
-      throw new Error(
-        `HTTP error! status: ${response.status}, body: ${errorBody}`
-      );
-    }
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (e: any) {
-      throw new Error(`Failed to parse JSON response: ${e.message}`);
     }
 
     try {
-      return (
-        endpoint as Endpoint<z.ZodType, z.ZodType, z.ZodType>
-      ).response.parse(data);
-    } catch (e) {
-      if (e instanceof z.ZodError) {
+      const response = await fetch(url.toString(), mergedOptions);
+
+      if (!response.ok) {
+        let errorBody;
+        try {
+          errorBody = await response.json();
+        } catch (e) {
+          errorBody = 'Unable to read error response body';
+        }
         throw new Error(
-          `Response validation failed: ${e.issues
-            .map((issue) => {
-              `${issue.path}: ${issue.message}`;
-            })
-            .join(', ')}`
+          `HTTP error! status: ${response.status}, message: ${JSON.stringify(
+            errorBody,
+            null,
+            2
+          )}`
         );
       }
-      throw e;
+      const data = await response.json();
+
+      const result = (
+        endpoint as Endpoint<z.ZodType, z.ZodType, z.ZodType>
+      ).response.parse(data);
+      return [null, result] as [null, InferResponse<T[K]>];
+    } catch (error) {
+      return [error instanceof Error ? error : new Error(String(error)), null];
     }
   };
 }
