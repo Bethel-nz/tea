@@ -33,73 +33,57 @@ const tea = createTea('https://jsonplaceholder.typicode.com', apiSchema);
 
 // Example usage
 async function fetchPosts() {
-  try {
-    const [error, posts] = await tea('GET /posts', {
-      headers: { 'Custom-Header': 'value' },
-    });
-    if (error) {
-      console.error('Error fetching posts:\n', error.message);
-    } else {
-      console.log('All posts:', posts);
-    }
-  } catch (error) {
-    console.error('Error fetching posts:', error);
+  const [error, posts] = await tea('GET /posts', {
+    headers: { 'Custom-Header': 'value' },
+  });
+  if (error) {
+    console.error('Error fetching posts:\n', error.message);
+  } else {
+    console.log('All posts:', posts);
   }
 }
 
 async function fetchSinglePost(id: string) {
-  try {
-    const [error, post] = await tea('GET /posts/:id', {
-      params: { id },
-    });
-    if (error) {
-      console.error('Error fetching single post:', error);
-    } else {
-      console.log('Single post:', post.title);
-    }
-  } catch (error) {
+  const [error, post] = await tea('GET /posts/:id', {
+    params: { id },
+  });
+  if (error) {
     console.error('Error fetching single post:', error);
+  } else {
+    console.log('Single post:', post.title);
   }
 }
 
 async function createPost() {
-  try {
-    const [error, newPost] = await tea('POST /posts', {
-      body: {
-        userId: 1,
-        title: 'foo',
-        body: 'bar',
-      },
-      stringify: true,
-    });
-    if (error) {
-      console.error('Error creating post:', error.message);
-    } else {
-      console.log('Created post:', newPost);
-    }
-  } catch (error: any) {
+  const [error, newPost] = await tea('POST /posts', {
+    body: {
+      userId: 1,
+      title: 'foo',
+      body: 'bar',
+    },
+    stringify: true,
+  });
+  if (error) {
     console.error('Error creating post:', error.message);
+  } else {
+    console.log('Created post:', newPost);
   }
 }
 
 async function updatePost() {
-  try {
-    const [error, updatedPost] = await tea('PUT /posts/:id', {
-      params: { id: '3' },
-      body: {
-        title: 'Updated Title',
-        body: 'Hello world',
-        userId: 1,
-      },
-      stringify: true,
-    });
-    if (error) {
-      console.error('Error updating post:\n', error.message);
-    } else {
-      console.log('Updated post:', updatedPost);
-    }
-  } catch (error: any) {
-    console.error('Error updating post:', error.message);
+  const [error, updatedPost] = await tea('PUT /posts/:id', {
+    params: { id: '3' },
+    body: {
+      title: 'Updated Title',
+      body: 'Hello world',
+      userId: 1,
+    },
+    stringify: true,
+  });
+  if (error) {
+    console.error('Error updating post:\n', error.message);
+  } else {
+    console.log('Updated post:', updatedPost);
   }
 }
 
