@@ -1,7 +1,32 @@
 {
   "name": "tea",
-  "version": "0.1.1",
-  "module": "index.ts",
+  "version": "0.1.0",
+  "description": "A lightweight, type-safe API client builder for TypeScript",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "require": "./dist/core.cjs"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js",
+      "require": "./dist/schema.cjs"
+    }
+  },
   "type": "module",
   "license": "MIT",
   "keywords": [
@@ -11,9 +36,10 @@
   ],
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch ./src/index.ts",
-    "pub": "tsc && npm publish",
-    "patch": "tsc && npm version patch && npm publish",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "pub": "npm run build && npm publish",
+    "patch": "npm run build && npm version patch && npm publish",
     "format": "biome format --write ."
   },
   "devDependencies": {

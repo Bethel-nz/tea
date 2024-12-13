@@ -10,6 +10,7 @@
 - Automatic parsing of JSON responses
 - Custom headers and request options
 - Abstracted error handling with tuple return type
+- Caching with query invalidation
 
 ## Usage
 
@@ -19,31 +20,29 @@ First, define your API schema using Zod schemas:
 
 ```typescript
 import { z } from 'zod';
-import { createTea } from 'tea';
+import { createTea } from 'tea/core';
+import type { TeaSchema } from 'tea/schema';
 
-const postSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  body: z.string(),
-});
-
-const apiSchema = {
-  'GET /posts': {
-    response: z.array(postSchema),
+const userSchema = {
+  getUsers: {
+    method: 'GET',
+    path: '/users',
+    schema: {
+      response: z.array(
+        z.object({
+          id: z.number(),
+          name: z.string(),
+          email: z.string().email(),
+        })
+      ),
+      query: z.object({
+        page: z.number().optional(),
+        limit: z.number().optional(),
+      }),
+    },
   },
-  'GET /posts/:id': {
-    response: postSchema,
-  },
-  'POST /posts': {
-    response: postSchema,
-    body: z.object({
-      userId: z.number(),
-      title: z.string(),
-      body: z.string(),
-    }), // optionally defined body schema
-    stringify: true, // stringify the body - defaults to false
-  },
-} as const;
+  //...other schema
+} satisfies TeaSchema;
 ```
 
 ### Creating the client
@@ -51,7 +50,8 @@ const apiSchema = {
 Create your API client using `createTea`:
 
 ```typescript
-const tea = createTea('https://jsonplaceholder.typicode.com', apiSchema);
+const tea = createTea('https://jsonplaceholder.typicode.com', userSchema);
+
 ```
 
 ### Making requests
@@ -59,61 +59,36 @@ const tea = createTea('https://jsonplaceholder.typicode.com', apiSchema);
 Now you can make fully typed requests to your API:
 
 ```typescript
-// GET request
+async function basicExample() {
+  try {
+    // Get all users with query params
+    const users = await tea('getUsers', {
+      query: { page: 1, limit: 5 },
+    });
+    console.log('Users:', users);
 
-const [error, posts] = await tea('GET /posts', {
-  headers: { 'Custom-Header': 'value' },
-});
-if (error) {
-  console.error('Error fetching posts:', error.message);
-} else {
-  console.log('All posts:', posts);
-}
+    // Get single user with path params
+    const user = await tea('getUser', {
+      params: { id: '1' }, // Type-safe params
+    });
+    console.log('Single user:', user);
 
-// GET request with path parameter
-
-const [error, post] = await tea('GET /posts/:id', {
-  params: { id },
-});
-if (error) {
-  console.error('Error fetching single post:', error);
-} else {
-  console.log('Single post:', post.title);
-}
-
-// POST request with body
-
-const [error, newPost] = await tea('POST /posts', {
-  body: {
-    userId: 1,
-    title: 'foo',
-    body: 'bar',
-  },
-  stringify: true,
-});
-if (error) {
-  console.error('Error creating post:', error.message);
-} else {
-  console.log('Created post:', newPost);
-}
-
-// PUT request with path parameter and body
-
-const [error, updatedPost] = await tea('PUT /posts/:id', {
-  params: { id: '3' },
-  body: {
-    title: 'Updated Title',
-    body: 'Hello world',
-    userId: 1,
-  },
-  stringify: true,
-});
-if (error) {
-  console.error('Error updating post:', error.message);
-} else {
-  console.log('Updated post:', updatedPost);
+    // Create user with body
+    const newUser = await tea('createUser', {
+      body: {
+        // Type-safe body
+        name: 'John Doe',
+        email: 'johndoe@email.com',
+      },
+    });
+    console.log('Created user:', newUser);
+  } catch (error) {
+    console.error('Error:', error);
+  }
 }
 ```
+
+see [Examples Here](./src/examples)
 
 ## Why Tea?
 
