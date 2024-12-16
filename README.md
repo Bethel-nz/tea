@@ -19,7 +19,6 @@ yarn add @bethel-nz/tea
 - Support for path parameters, query parameters, and request bodies
 - Automatic parsing of JSON responses
 - Custom headers and request options
-- Abstracted error handling with tuple return type
 - Caching with query invalidation
 
 ## Usage
