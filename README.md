@@ -2,6 +2,16 @@
 
 `tea` is a lightweight, type-safe API client builder for TypeScript, powered by [Zod](https://github.com/colinhacks/zod) for runtime validation. It provides a simple way to define your API schema and create a fully typed client for making HTTP requests.
 
+## Installation
+
+```shell
+npm i @bethel-nz/tea
+
+bun add @bethel-nz/tea
+
+yarn add @bethel-nz/tea
+```
+
 ## Features
 
 - Define your API schema using Zod for both request and response validation
