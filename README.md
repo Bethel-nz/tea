@@ -29,8 +29,8 @@ First, define your API schema using Zod schemas:
 
 ```typescript
 import { z } from 'zod';
-import { createTea } from 'tea/core';
-import type { TeaSchema } from 'tea/schema';
+import { createTea } from '@bethel-nz/tea/core';
+import type { TeaSchema } from '@bethel-nz/tea/schema';
 
 const userSchema = {
   getUsers: {
